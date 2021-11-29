@@ -11,7 +11,7 @@ A utility for visualizing and recording Biopotential Signals using Upside Down L
 3. In your Arduino IDE under Tools|Board make sure you choose "ESP32 Dev Module" or a board allowing partition schemes.
 4. Compile sketch and run it on your ESP32.
 5. In your Arduino IDE under Tools, click ESP32 Sketch Data Upload, BioSignal-Recorder uses spiffs file system.
-6. Go to the serial monitor, you can find IP for the webpage, you might have to hard reset your esp32 at this stageif the information does not show up.
+6. Go to the serial monitor, you can find IP for the webpage, you might have to hard reset your esp32 at this stage if the IP is not displayed.
 
 
 ## Resources
