@@ -1,0 +1,293 @@
+<!-- EXG-Visualizer
+https://github.com/upsidedownlabs/BioSignal-Recorder
+
+Copyright (c) 2021 Moteen Shah moteenshah.02@gmail.com
+
+
+Upside Down Labs invests time and resources providing this open source code,
+please support Upside Down Labs and open-source hardware by purchasing
+products from Upside Down Labs!
+Copyright (c) 2021 Upside Down Labs - contact@upsidedownlabs.tech
+
+Permission is hereby granted, free of charge, to any person obtaining a copy
+of this software and associated documentation files (the "Software"), to deal
+in the Software without restriction, including without limitation the rights
+to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+copies of the Software, and to permit persons to whom the Software is
+furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all
+copies or substantial portions of the Software.
+
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+SOFTWARE.
+
+This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/Esp32_oscilloscope. -->
+
+<!DOCTYPE html>
+<style>
+    /* button control */
+    
+    .button {
+        padding: 10px 15px;
+        font-size: 22px;
+        text-align: center;
+        cursor: pointer;
+        outline: none;
+        color: white;
+        border: none;
+        border-radius: 12px;
+        box-shadow: 1px 1px #ccc;
+        position: relative;
+        top: 0px;
+        height: 42px
+    }
+    
+    button:disabled {
+        background-color: #aaa
+    }
+    
+    button:disabled:hover {
+        background-color: #aaa
+    }
+    /* blue button */
+    
+    .button1 {
+        background-color: #2196F3
+    }
+    
+    .button1:hover {
+        background-color: #0961aa
+    }
+    
+    .button1:active {
+        background-color: #0961aa;
+        transform: translateY(3px)
+    }
+    
+    .button2 {
+        background-color: green
+    }
+    
+    .button2:hover {
+        background-color: darkgreen
+    }
+    
+    .button2:active {
+        background-color: darkgreen;
+        transform: translateY(3px)
+    }
+    /* red button */
+    
+    .button3 {
+        background-color: red
+    }
+    
+    .button3:hover {
+        background-color: darkred
+    }
+    
+    .button3:active {
+        background-color: darkred;
+        transform: translateY(3px)
+    }
+</style>
+<html>
+
+<body>
+
+    <canvas id='oscilloscope' width='968' height='512' ;></canvas></div>
+
+    <div class='d3'><button class='button button2' id='startButton' onclick="
+    drawBackgroundAndCalculateParameters ();
+    enableDisableControls (true);
+    startOscilloscope ();
+  ">&nbsp;START&nbsp;</button></div>
+    <div class='d5'><button class='button button3' id='stopButton' disabled onclick="
+    enableDisableControls (false);
+    stopOscilloscope ();
+  ">&nbsp;STOP&nbsp;</button></div>
+    </div>
+
+
+</body>
+
+<head>
+    <link rel='shortcut icon' type='image/x-icon' sizes='192x192' href='/android-192-osc.png'>
+    <link rel='icon' type='image/png' sizes='192x192' href='/android-192-osc.png'>
+    <link rel='apple-touch-icon' sizes='180x180' href='/apple-180-osc.png'>
+    <meta http-equiv='content-type' content='text/html; charset=utf-8' />
+
+    <title>Esp32_oscilloscope</title>
+    <script>
+        var webSocket = null;
+
+        function stopOscilloscope() {
+            if (webSocket != null) {
+                webSocket.send('stop');
+                webSocket.close();
+                webSocket = null;
+            }
+        }
+
+        function startOscilloscope() {
+            stopOscilloscope();
+            if ('WebSocket' in window) {
+                var ws = new WebSocket("ws://" + window.location.hostname + ":81/");
+                webSocket = ws;
+                ws.onmessage = function(evt) {
+                    JSONobj = JSON.parse(evt.data);
+                    var ADCval1, ADCval2, ADCval3, ADCval;
+                    ADCval1 = JSONobj.ADC1;
+                    ADCval2 = JSONobj.ADC2;
+                    ADCval3 = JSONobj.ADC3;
+                    ADCval = [ADCval1, ADCval2, ADCval3];
+                    var myInt16Array = new Int16Array(ADCval);
+                    drawSignal(myInt16Array, 0, myInt16Array.length - 1);
+                };
+            }
+        }
+
+        var screenWidthTime; // oscilloscope screen width in time units
+        var restartDrawingSignal; // used for drawing the signal
+        var screenTimeOffset; // used for drawing the signal
+
+        var xOffset;
+        var xScale;
+        var yOffset;
+        var yScale;
+        var yLast;
+
+        function drawBackgroundAndCalculateParameters() {
+
+            var x; // x coordinate
+            var y; // y coordinate
+            var i; // x coordinate in canvas units
+            var j; // y coordinate in canas units
+            var yGridTick;
+            var gridTop; // y value at the top of the grid
+
+            restartDrawingSignal = true; // drawing parameter - for later use
+            screenTimeOffset = 0; // drawing parameter - for later use
+
+            var canvas = document.getElementById('oscilloscope');
+            var ctx = canvas.getContext('2d');
+
+            // colour background
+            ctx.fillStyle = '#031c30';
+            ctx.beginPath();
+            ctx.moveTo(0, 0);
+            ctx.lineTo(canvas.width - 1, 0);
+            ctx.lineTo(canvas.width - 1, canvas.height - 1);
+            ctx.lineTo(0, canvas.height - 1);
+            ctx.fill();
+
+            // calculate drawing parametes and draw grid and scale
+            ctx.strokeStyle = '#2196F3';
+            ctx.lineWidth = 3;
+            ctx.font = '16px Verdana';
+
+            xOffset = 50;
+
+            yScale = -(canvas.height - 60) / 4096;
+            yGridTick = 1000;
+            yScale *= 1;
+            yOffset = canvas.height - 50
+            gridTop = yOffset + yScale * 4095 + 5;
+
+            // draw horizontal grid and scale
+            for (y = 0; y < 4096; y += yGridTick) {
+                j = yOffset + yScale * y;
+                ctx.strokeText(y.toString(), 5, j + 5);
+                ctx.beginPath();
+                ctx.moveTo(xOffset - 5, j);
+                ctx.lineTo(canvas.width, j);
+                ctx.stroke();
+            }
+
+            screenWidthTime = 500000;
+            xGridTick = screenWidthTime / 100;
+            xScale = ((canvas.width - xOffset) * 10) / screenWidthTime;
+            xLabel = "0.5 sec";
+
+            for (x = 0; x < screenWidthTime; x += xGridTick) {
+                i = xOffset + xScale * x;
+                ctx.strokeText(xLabel, i + 25, yOffset + 25);
+                ctx.beginPath();
+                ctx.moveTo(i, yOffset + 5);
+                ctx.lineTo(i, gridTop);
+                ctx.stroke();
+            }
+        }
+
+        drawBackgroundAndCalculateParameters();
+
+        var lastI; // last drawn sample (time)
+        var lastJ1; // signal 1
+        var lastJ2; // signal 2
+
+
+        function drawSignal(myInt16Array, startInd, endInd) {
+            if (startInd > endInd) return;
+            // find dummy sample (the one with value of -1) which will tells javascript cliento to start drawing from beginning of the screen
+            for (var ind = startInd; ind <= endInd; ind += 3) {
+                if (myInt16Array[ind] == -1) { // if signal value = -1 (dummy value)
+                    drawSignal(myInt16Array, startInd, ind - 3); // upt to previous sample, there are 3 16 bit words in each sample
+                    drawBackgroundAndCalculateParameters();
+                    drawSignal(myInt16Array, ind + 3, endInd); // from next sample on, there are 3 16 bit words in each sample
+                    return;
+                }
+            }
+
+            var canvas = document.getElementById('oscilloscope');
+            var ctx = canvas.getContext('2d');
+            ctx.lineWidth = 3;
+
+            for (var ind = startInd; ind < endInd; ind += 3) { // there are 3 16 bit words in each sample
+                // calculate sample position
+                screenTimeOffset += myInt16Array[ind + 2];
+                i = xOffset + xScale * screenTimeOffset; // time
+                j1 = yOffset + yScale * myInt16Array[ind]; // signal 1
+
+                if (restartDrawingSignal) {
+                    restartDrawingSignal = false;
+                } else {
+                    // signal 1
+                    ctx.strokeStyle = '#ffbf80';
+                    ctx.beginPath();
+                    ctx.moveTo(lastI, lastJ1);
+                    ctx.lineTo(i, j1);
+                    ctx.stroke();
+                }
+                lastI = i;
+                lastJ1 = j1;
+                if (i > 1000) {
+
+
+                    screenTimeOffset = 0;
+                    drawBackgroundAndCalculateParameters();
+                }
+            }
+        }
+
+        function enableDisableControls(workMode) {
+            if (workMode) {
+                // disable GPIO, analog/digital, trigger, frequency and start, enable stop
+                document.getElementById('startButton').disabled = true;
+                document.getElementById('stopButton').disabled = false;
+            } else {
+                // enable GPIO, analog/digital, trigger, frequency and start, disable stop
+                document.getElementById('startButton').disabled = false;
+                document.getElementById('stopButton').disabled = true;
+            }
+        }
+    </script>
+</head>
+
+</html>
