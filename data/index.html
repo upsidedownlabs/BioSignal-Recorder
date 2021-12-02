@@ -102,7 +102,7 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
 
 <body>
 
-    <canvas id='oscilloscope' width='968' height='512' ;></canvas></div>
+    <canvas id='oscilloscope' width='968' height='640' ;></canvas></div>
 
     <div class='d3'><button class='button button2' id='startButton' onclick="
     drawBackgroundAndCalculateParameters ();
@@ -195,14 +195,14 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
 
             xOffset = 50;
 
-            yScale = -(canvas.height - 60) / 4096;
+            yScale = -(canvas.height - 60) / 5120;
             yGridTick = 1000;
             yScale *= 1;
-            yOffset = canvas.height - 50
-            gridTop = yOffset + yScale * 4095 + 5;
+            yOffset = canvas.height - 50;
+            gridTop = yOffset + yScale * 5119 + 5;
 
             // draw horizontal grid and scale
-            for (y = 0; y < 4096; y += yGridTick) {
+            for (y = 0; y < 5120; y += yGridTick) {
                 j = yOffset + yScale * y;
                 ctx.strokeText(y.toString(), 5, j + 5);
                 ctx.beginPath();
@@ -211,10 +211,10 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
                 ctx.stroke();
             }
 
-            screenWidthTime = 500000;
-            xGridTick = screenWidthTime / 100;
-            xScale = ((canvas.width - xOffset) * 10) / screenWidthTime;
-            xLabel = "0.5 sec";
+            screenWidthTime = 3000000;
+            xGridTick = screenWidthTime / 1000;
+            xScale = ((canvas.width - xOffset) * 100) / screenWidthTime;
+            xLabel = "0.3 sec";
 
             for (x = 0; x < screenWidthTime; x += xGridTick) {
                 i = xOffset + xScale * x;
