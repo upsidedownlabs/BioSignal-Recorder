@@ -39,7 +39,7 @@ WebSocketsServer webSocket = WebSocketsServer(81);
 const char *SSID = "";
 const char *PASSWORD = "";
 
-String myString[3] = {"0", "-1", "25"}; //1st index used for ADC data, 2nd as dummy value per sample, 3rd for timing
+String myString[3] = {"0", "0", "25"}; //1st index used for ADC data, 2nd as dummy value per sample, 3rd for timing
 
 String JSONtxt;
 AsyncWebServer server(80);
@@ -75,14 +75,21 @@ void setup()
   webSocket.begin();
 }
 
+int counter = 0;
+
 void loop(){
   webSocket.loop();
   String ADCVal = String(readADC().c_str());
 
   myString[0] = ADCVal;
+  counter++;
+  myString[2] = String(counter);
   JSONtxt = "{\"ADC1\":\"" + myString[0] + "\",";
   JSONtxt += "\"ADC2\":\"" + myString[1] + "\",";
   JSONtxt += "\"ADC3\":\"" + myString[2] + "\"}";
-
+  
+  
+  
   webSocket.broadcastTXT(JSONtxt);
+  delay(1);
 }
