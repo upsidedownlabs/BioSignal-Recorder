@@ -31,9 +31,10 @@ SOFTWARE.
 This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/Esp32_oscilloscope. -->
 
 <!DOCTYPE html>
+
 <style>
     /* button control */
-    
+
     .button {
         padding: 10px 15px;
         font-size: 22px;
@@ -48,64 +49,94 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
         top: 0px;
         height: 42px
     }
-    
+
     button:disabled {
         background-color: #aaa
     }
-    
+
     button:disabled:hover {
         background-color: #aaa
     }
+
     /* blue button */
-    
+
     .button1 {
         background-color: #2196F3
     }
-    
+
     .button1:hover {
         background-color: #0961aa
     }
-    
+
     .button1:active {
         background-color: #0961aa;
         transform: translateY(3px)
     }
-    
+
     .button2 {
         background-color: green
     }
-    
+
     .button2:hover {
         background-color: darkgreen
     }
-    
+
     .button2:active {
         background-color: darkgreen;
         transform: translateY(3px)
     }
+
     /* red button */
-    
+
     .button3 {
         background-color: red
     }
-    
+
     .button3:hover {
         background-color: darkred
     }
-    
+
     .button3:active {
         background-color: darkred;
         transform: translateY(3px)
     }
+
+    .chart {
+        width: 60%;
+        height: auto;
+        margin: auto;
+    }
 </style>
 <html>
 
+<head>
+    <link rel='shortcut icon' type='image/x-icon' sizes='192x192' href='/android-192-osc.png'>
+    <link rel='icon' type='image/png' sizes='192x192' href='/android-192-osc.png'>
+    <link rel='apple-touch-icon' sizes='180x180' href='/apple-180-osc.png'>
+    <meta http-equiv='content-type' content='text/html; charset=utf-8' />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.8.2/chart.min.js"></script>
+
+
+    <title>Esp32_oscilloscope</title>
+</head>
+
 <body>
 
-    <canvas id='oscilloscope' width='968' height='640' ;></canvas></div>
+    <div class="container mt-5">
+        <div class="card">
+            <div class="card-header" style="align-items: center;">BioSignal-Recorder</div>
+            <div class="card-body">
+                <div class="chart">
+                    <canvas id='oscilloscope'></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
 
     <div class='d3'><button class='button button2' id='startButton' onclick="
-    drawBackgroundAndCalculateParameters ();
     enableDisableControls (true);
     startOscilloscope ();
   ">&nbsp;START&nbsp;</button></div>
@@ -115,17 +146,74 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
   ">&nbsp;STOP&nbsp;</button></div>
     </div>
 
-
-</body>
-
-<head>
-    <link rel='shortcut icon' type='image/x-icon' sizes='192x192' href='/android-192-osc.png'>
-    <link rel='icon' type='image/png' sizes='192x192' href='/android-192-osc.png'>
-    <link rel='apple-touch-icon' sizes='180x180' href='/apple-180-osc.png'>
-    <meta http-equiv='content-type' content='text/html; charset=utf-8' />
-
-    <title>Esp32_oscilloscope</title>
     <script>
+
+        var data = {
+            labels: [0],
+            datasets: [{
+                label: 'Real-time Data',
+                data: [],
+                borderColor: '#e67e22',
+                backgroundColor: '#2ecc71',
+                borderWidth: 1,
+                pointRadius: 0,
+                lineTnesion: 0.5,
+            }]
+        }
+
+        var config = {
+            type: 'line',
+            data: data,
+            options: {
+                scales: {
+                    y: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Analog',
+                            color: '#911',
+                            font: {
+                                family: 'Roboto',
+                                size: 20,
+                                // weight: 'bold',
+                                lineHeight: 1.2,
+                            },
+                            padding: { top: 20, left: 0, right: 0, bottom: 0 }
+                        },
+                        suggestedMin: 0,
+                        suggestedMax: 5000,
+                    },
+                    x: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Time',
+                            color: '#911',
+                            font: {
+                                family: 'Roboto',
+                                size: 20,
+                                // weight: 'bold',
+                                lineHeight: 1.2,
+                            },
+                            padding: { top: 10, left: 0, right: 0, bottom: 0 }
+                        },
+                        ticks: {
+                            maxTicksLimit: 10,
+                        }
+                    }
+
+                },
+                animation: {
+                    duration: 0,
+                }
+            }
+        }
+
+        Chart.defaults.font.size = 16;
+        Chart.defaults.font.style = 'normal';
+        Chart.defaults.backgroundColor = '#9BD0F5';
+        chart = new Chart(document.getElementById('oscilloscope'), config);
+
         var webSocket = null;
 
         function stopOscilloscope() {
@@ -136,145 +224,45 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
             }
         }
 
+        var value = 0;
+        var time = 0;
+        var test = 0;
         function startOscilloscope() {
             stopOscilloscope();
-            if ('WebSocket' in window) {
-                var ws = new WebSocket("ws://" + window.location.hostname + ":81/");
-                webSocket = ws;
-                ws.onmessage = function(evt) {
-                    JSONobj = JSON.parse(evt.data);
-                    var ADCval1, ADCval2, ADCval3, ADCval;
-                    ADCval1 = JSONobj.ADC1;
-                    ADCval2 = JSONobj.ADC2;
-                    ADCval3 = JSONobj.ADC3;
-                    ADCval = [ADCval1, ADCval2, ADCval3];
-                    var myInt16Array = new Int16Array(ADCval);
-                    drawSignal(myInt16Array, 0, myInt16Array.length - 1);
-                };
-            }
+            webSocket = new WebSocket("ws://" + window.location.hostname + ":81/");
+            var start_t = new Date;
+            start_t = start_t.getTime();
+            start_time = parseFloat(start_t);
+
+            webSocket.addEventListener('message', function (event) {
+                JSONobj = JSON.parse(event.data);
+                current_t = new Date;
+                current_t = current_t.getTime();
+                current_time = parseFloat(current_t);
+
+                time = parseInt((current_time - start_time) / 1000);
+
+                value = parseInt(JSONobj.ADC1);
+                test = parseInt(JSONobj.ADC3);
+            });
         }
 
-        var screenWidthTime; // oscilloscope screen width in time units
-        var restartDrawingSignal; // used for drawing the signal
-        var screenTimeOffset; // used for drawing the signal
+        test = 0;
+        window.setInterval(callback, 1);
+        function callback() {
 
-        var xOffset;
-        var xScale;
-        var yOffset;
-        var yScale;
-        var yLast;
-
-        function drawBackgroundAndCalculateParameters() {
-
-            var x; // x coordinate
-            var y; // y coordinate
-            var i; // x coordinate in canvas units
-            var j; // y coordinate in canas units
-            var yGridTick;
-            var gridTop; // y value at the top of the grid
-
-            restartDrawingSignal = true; // drawing parameter - for later use
-            screenTimeOffset = 0; // drawing parameter - for later use
-
-            var canvas = document.getElementById('oscilloscope');
-            var ctx = canvas.getContext('2d');
-
-            // colour background
-            ctx.fillStyle = '#031c30';
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo(canvas.width - 1, 0);
-            ctx.lineTo(canvas.width - 1, canvas.height - 1);
-            ctx.lineTo(0, canvas.height - 1);
-            ctx.fill();
-
-            // calculate drawing parametes and draw grid and scale
-            ctx.strokeStyle = '#2196F3';
-            ctx.lineWidth = 3;
-            ctx.font = '16px Verdana';
-
-            xOffset = 50;
-
-            yScale = -(canvas.height - 60) / 5120;
-            yGridTick = 1000;
-            yScale *= 1;
-            yOffset = canvas.height - 50;
-            gridTop = yOffset + yScale * 5119 + 5;
-
-            // draw horizontal grid and scale
-            for (y = 0; y < 5120; y += yGridTick) {
-                j = yOffset + yScale * y;
-                ctx.strokeText(y.toString(), 5, j + 5);
-                ctx.beginPath();
-                ctx.moveTo(xOffset - 5, j);
-                ctx.lineTo(canvas.width, j);
-                ctx.stroke();
+            if (data.datasets[0].data.length > 500) {
+                data.labels.pop();
+                data.datasets[0].data.pop();
             }
+            data.labels.unshift(time);
+            data.datasets[0].data.unshift(value);
+            console.log(test);
+            chart.update();
 
-            screenWidthTime = 3000000;
-            xGridTick = screenWidthTime / 1000;
-            xScale = ((canvas.width - xOffset) * 100) / screenWidthTime;
-            xLabel = "0.3 sec";
-
-            for (x = 0; x < screenWidthTime; x += xGridTick) {
-                i = xOffset + xScale * x;
-                ctx.strokeText(xLabel, i + 25, yOffset + 25);
-                ctx.beginPath();
-                ctx.moveTo(i, yOffset + 5);
-                ctx.lineTo(i, gridTop);
-                ctx.stroke();
-            }
         }
 
-        drawBackgroundAndCalculateParameters();
 
-        var lastI; // last drawn sample (time)
-        var lastJ1; // signal 1
-        var lastJ2; // signal 2
-
-
-        function drawSignal(myInt16Array, startInd, endInd) {
-            if (startInd > endInd) return;
-            // find dummy sample (the one with value of -1) which will tells javascript cliento to start drawing from beginning of the screen
-            for (var ind = startInd; ind <= endInd; ind += 3) {
-                if (myInt16Array[ind] == -1) { // if signal value = -1 (dummy value)
-                    drawSignal(myInt16Array, startInd, ind - 3); // upt to previous sample, there are 3 16 bit words in each sample
-                    drawBackgroundAndCalculateParameters();
-                    drawSignal(myInt16Array, ind + 3, endInd); // from next sample on, there are 3 16 bit words in each sample
-                    return;
-                }
-            }
-
-            var canvas = document.getElementById('oscilloscope');
-            var ctx = canvas.getContext('2d');
-            ctx.lineWidth = 3;
-
-            for (var ind = startInd; ind < endInd; ind += 3) { // there are 3 16 bit words in each sample
-                // calculate sample position
-                screenTimeOffset += myInt16Array[ind + 2];
-                i = xOffset + xScale * screenTimeOffset; // time
-                j1 = yOffset + yScale * myInt16Array[ind]; // signal 1
-
-                if (restartDrawingSignal) {
-                    restartDrawingSignal = false;
-                } else {
-                    // signal 1
-                    ctx.strokeStyle = '#ffbf80';
-                    ctx.beginPath();
-                    ctx.moveTo(lastI, lastJ1);
-                    ctx.lineTo(i, j1);
-                    ctx.stroke();
-                }
-                lastI = i;
-                lastJ1 = j1;
-                if (i > 1000) {
-
-
-                    screenTimeOffset = 0;
-                    drawBackgroundAndCalculateParameters();
-                }
-            }
-        }
 
         function enableDisableControls(workMode) {
             if (workMode) {
@@ -288,6 +276,7 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
             }
         }
     </script>
-</head>
+
+</body>
 
 </html>
