@@ -148,6 +148,7 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
 
     <script>
 
+        var debug = false;
         var data = {
             labels: [0],
             datasets: [{
@@ -157,7 +158,6 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
                 backgroundColor: '#2ecc71',
                 borderWidth: 1,
                 pointRadius: 0,
-                lineTnesion: 0.5,
             }]
         }
 
@@ -226,43 +226,37 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
 
         var value = 0;
         var time = 0;
-        var test = 0;
+        var test = "0";
+
         function startOscilloscope() {
             stopOscilloscope();
             webSocket = new WebSocket("ws://" + window.location.hostname + ":81/");
-            var start_t = new Date;
-            start_t = start_t.getTime();
-            start_time = parseFloat(start_t);
-
-            webSocket.addEventListener('message', function (event) {
+            var start_t = Date.now();
+            
+            webSocket.onmessage = function(event){
                 JSONobj = JSON.parse(event.data);
-                current_t = new Date;
-                current_t = current_t.getTime();
-                current_time = parseFloat(current_t);
 
-                time = parseInt((current_time - start_time) / 1000);
+                current_t = Date.now();
+                time = parseInt((parseInt(current_t) - parseInt(start_t)) / 1000);
 
                 value = parseInt(JSONobj.ADC1);
-                test = parseInt(JSONobj.ADC3);
-            });
-        }
+                test = (JSONobj.ADC2);
+                if(debug){console.log(test);}
 
-        test = 0;
+                if (data.datasets[0].data.length > 1000  ) {
+                    data.labels.pop();
+                    data.datasets[0].data.pop();
+                }
+                data.labels.unshift(time);
+                data.datasets[0].data.unshift(value);
+            };
+            
+        }
         window.setInterval(callback, 1);
-        function callback() {
-
-            if (data.datasets[0].data.length > 500) {
-                data.labels.pop();
-                data.datasets[0].data.pop();
-            }
-            data.labels.unshift(time);
-            data.datasets[0].data.unshift(value);
-            console.log(test);
+        function callback()
+        {
             chart.update();
-
         }
-
-
 
         function enableDisableControls(workMode) {
             if (workMode) {
