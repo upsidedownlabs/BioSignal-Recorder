@@ -276,8 +276,8 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
             var parent = document.body;
             gpio_text = ["GPIO 32", "GPIO 33", "GPIO 34", "GPIO 35", "GPIO 36", "GPIO 37", "GPIO 38", "GPIO 39"];
             gpio_value = ['4', '5', '6', '7', '0', '1', '2', '3'];
-            rate_text = ["100 Hz", "200 Hz", "300 Hz", "400 Hz", "500 Hz"];
-            rate_value = ["100", "200", "300", "400", "500"]
+            rate_text = ["100 Hz", "200 Hz", "300 Hz", "400 Hz", "500 Hz", "1000 Hz", "4000 Hz", "5000 Hz"];
+            rate_value = ["100", "200", "300", "400", "500", "1000", "4000", "5000"];
 
             for (var i = 0; i < $("#channel_count").val(); i++) {
                 var subparent = document.createElement('p');
@@ -432,8 +432,8 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
                 i++;
             });
             webSocket = new WebSocket("ws://" + window.location.hostname + ":81/");
+            webSocket.binaryType = 'arraybuffer';
             webSocket.addEventListener("open", (event) => {
-
                 for (var i = 0; i < $("#channel_count").val(); i++) {
                     msg = rate[i] + pin[i];
                     webSocket.send(msg);
@@ -442,25 +442,33 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
 
             start_t = Date.now();
             webSocket.onmessage = function (event) {
-                JSONobj = JSON.parse(event.data);
-                channel_count = JSONobj.channel_count;
-                ADC = JSONobj.ADC;
-                packet_count = JSONobj.packet_count;
+
+                if(event.data instanceof ArrayBuffer ){
+				ADC = new Uint16Array(event.data);
+			    }
+                channel_count = ADC[ADC.length - 1];
+                packet_count = ADC[ADC.length - 2];
+                for (var i = 0; i < ADC.length - 2; i++)
+                {
+                    data.datasets[channel_count].data.unshift(ADC[i]);
+                }
+                while (data.datasets[channel_count].data.length > 1000) {
+                    data.datasets[channel_count].data.pop();
+                }
 
 
                 if (data.labels.length > 1000) {
                     data.labels.pop();
                 }
-                if (data.datasets[channel_count].data.length > 1000) {
-                    data.datasets[channel_count].data.pop();
-                }
-                data.datasets[channel_count].data.unshift(ADC);
-
                 current_t = Date.now();
                 time = parseInt(current_t) - parseInt(start_t)
                 data.labels.unshift(time);
 
-                csvFileData += channel_count + "," + time + "," + ADC + "," + packet_count + "\n";
+                for (var i = 0; i < ADC.length - 2; i++)
+                {
+                    csvFileData += channel_count + "," + time + "," + ADC[i] + "," + packet_count + "\n";
+                }
+                
             };
 
 

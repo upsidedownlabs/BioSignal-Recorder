@@ -3,7 +3,7 @@
 
 // Copyright (c) 2021 Moteen Shah moteenshah.02@gmail.com
 
-  
+
 // Upside Down Labs invests time and resources providing this open source code,
 // please support Upside Down Labs and open-source hardware by purchasing
 // products from Upside Down Labs!
@@ -33,14 +33,12 @@
 #include <ESPAsyncWebServer.h>
 #include <SPIFFS.h>
 #include <driver/adc.h>
+#include <math.h>
 
 WebSocketsServer webSocket = WebSocketsServer(81);
 const char *SSID = "";
 const char *PASSWORD = "";
 
-String myString[3] = {"0", "0", "0"}; //1st index used for channel no., 2nd for data and 3rd as packet number
-
-String JSONtxt;
 AsyncWebServer server(80);
 
 volatile int interruptCounter[4] = {0};
@@ -152,6 +150,7 @@ void callback(byte num, WStype_t type, uint8_t * payload, size_t length)
   }
 }
 
+uint16_t **buffer_add = (uint16_t **)calloc(4, sizeof(uint16_t *));
 
 void send_samples(int sampling_rate, int adc, int channel_count)
 {
@@ -164,6 +163,7 @@ void send_samples(int sampling_rate, int adc, int channel_count)
       timerAttachInterrupt(timer_1, &onTimer_1, true);
       timerAlarmWrite(timer_1, tick_count, true);
       timerAlarmEnable(timer_1);
+      buffer_add[0] = (uint16_t*)calloc(round((float)sampling_rate / 30.0) + 2, sizeof(uint16_t));
       break;
 
     case 1:
@@ -171,6 +171,7 @@ void send_samples(int sampling_rate, int adc, int channel_count)
       timerAttachInterrupt(timer_2, &onTimer_2, true);
       timerAlarmWrite(timer_2, tick_count, true);
       timerAlarmEnable(timer_2);
+      buffer_add[1] = (uint16_t*)calloc(round((float)sampling_rate / 30.0) + 2, sizeof(uint16_t));
       break;
 
     case 2:
@@ -178,6 +179,7 @@ void send_samples(int sampling_rate, int adc, int channel_count)
       timerAttachInterrupt(timer_3, &onTimer_3, true);
       timerAlarmWrite(timer_3, tick_count, true);
       timerAlarmEnable(timer_3);
+      buffer_add[2] = (uint16_t*)calloc(round((float)sampling_rate / 30.0) + 2, sizeof(uint16_t));
       break;
 
     case 3:
@@ -185,6 +187,7 @@ void send_samples(int sampling_rate, int adc, int channel_count)
       timerAttachInterrupt(timer_4, &onTimer_4, true);
       timerAlarmWrite(timer_4, tick_count, true);
       timerAlarmEnable(timer_4);
+      buffer_add[3] = (uint16_t*)calloc(round((float)sampling_rate / 30.0) + 2, sizeof(uint16_t));
       break;
 
   }
@@ -192,14 +195,14 @@ void send_samples(int sampling_rate, int adc, int channel_count)
   adc1_config_channel_atten((adc1_channel_t)(adc), ADC_ATTEN_DB_11);
 }
 
-static long num_counter[4] = {0};
-static long ascii_counter[4] = {65, 65, 65, 65};
+static long num_counter = 0;
+static long buffer_counter[4] = {0};
 portMUX_TYPE * timer_mux = NULL;
 void loop() {
   webSocket.loop();
 
   for (int i = 0; i < total_channel; i++)
-  {Serial.println(i);
+  {
     switch (i)
     {
       case 0:
@@ -222,33 +225,28 @@ void loop() {
       interruptCounter[i]--;
       portEXIT_CRITICAL(timer_mux);
 
-      if (num_counter[i] < 1000)
+      if (buffer_counter[i] < round((float)sampling_rate / 30.0))
       {
-        num_counter[i]++;
+        buffer_add[i][buffer_counter[i]] = adc1_get_raw((adc1_channel_t)adc[i]) & 0x0FFF;
+        buffer_counter[i]++;
       }
       else
       {
-        num_counter[i] = 0;
-        if (ascii_counter[i] < 90)
+        if (num_counter < 100)
         {
-          ascii_counter[i]++;
+          num_counter++;
         }
         else
         {
-          ascii_counter[i] = 65;
+          num_counter = 0;
         }
-
+        buffer_add[i][buffer_counter[i]] = num_counter & 0x0FFF;
+        buffer_counter[i]++;
+        buffer_add[i][buffer_counter[i]] = i & 0x0FFF;
+        buffer_counter[i]++;
+        webSocket.sendBIN(0, (uint8_t *)&buffer_add[i][0], buffer_counter[i]*sizeof(uint16_t));
+        buffer_counter[i] = 0;
       }
-
-      myString[0] = String(i);
-      myString[1] = String(adc1_get_raw((adc1_channel_t)adc[i]));
-      myString[2] = (char)ascii_counter[i] + String(num_counter[i]);
-      JSONtxt = "{\"channel_count\":\"" + myString[0] + "\",";
-      JSONtxt += "\"ADC\":\"" + myString[1] + "\",";
-      JSONtxt += "\"packet_count\":\"" + myString[2] + "\"}";
-
-      webSocket.broadcastTXT(JSONtxt);
-
     }
 
   }
