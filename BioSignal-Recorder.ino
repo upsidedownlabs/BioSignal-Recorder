@@ -38,8 +38,8 @@
 WebSocketsServer webSocket = WebSocketsServer(81);
 
 // Add SSID and PASSWORD for network you are connected to
-const char *SSID = "Delta_Virus_2.4G";
-const char *PASSWORD = "66380115";
+const char *SSID = "";
+const char *PASSWORD = "";
 
 AsyncWebServer server(80);
 
