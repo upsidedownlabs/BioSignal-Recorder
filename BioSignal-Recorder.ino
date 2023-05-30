@@ -1,13 +1,13 @@
 // EXG-Visualizer
 // https://github.com/upsidedownlabs/BioSignal-Recorder
 
-// Copyright (c) 2021 Moteen Shah moteenshah.02@gmail.com
+// Copyright (c) 2023 Mahesh Tupe tupemahesh91@gmail.com
 
 
 // Upside Down Labs invests time and resources providing this open source code,
 // please support Upside Down Labs and open-source hardware by purchasing
 // products from Upside Down Labs!
-// Copyright (c) 2021 Upside Down Labs - contact@upsidedownlabs.tech
+// Copyright (c) 2023 Upside Down Labs - contact@upsidedownlabs.tech
 
 // Permission is hereby granted, free of charge, to any person obtaining a copy
 // of this software and associated documentation files (the "Software"), to deal
@@ -36,13 +36,16 @@
 #include <math.h>
 
 WebSocketsServer webSocket = WebSocketsServer(81);
-const char *SSID = "";
-const char *PASSWORD = "";
+
+// Add SSID and PASSWORD for network you are connected to
+const char *SSID = "Delta_Virus_2.4G";
+const char *PASSWORD = "66380115";
 
 AsyncWebServer server(80);
 
 volatile int interruptCounter[4] = {0};
 
+// Initialize timer interrupts
 hw_timer_t * timer_1 = NULL;
 hw_timer_t * timer_2 = NULL;
 hw_timer_t * timer_3 = NULL;
@@ -53,6 +56,7 @@ portMUX_TYPE timerMux_2 = portMUX_INITIALIZER_UNLOCKED;
 portMUX_TYPE timerMux_3 = portMUX_INITIALIZER_UNLOCKED;
 portMUX_TYPE timerMux_4 = portMUX_INITIALIZER_UNLOCKED;
 
+// counter for each timer
 void IRAM_ATTR onTimer_1() {
   portENTER_CRITICAL_ISR(&timerMux_1);
   interruptCounter[0]++;
@@ -151,6 +155,7 @@ void callback(byte num, WStype_t type, uint8_t * payload, size_t length)
 }
 
 uint16_t **buffer_add = (uint16_t **)calloc(4, sizeof(uint16_t *));
+
 
 void send_samples(int sampling_rate, int adc, int channel_count)
 {

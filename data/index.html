@@ -1,13 +1,13 @@
 <!-- EXG-Visualizer
 https://github.com/upsidedownlabs/BioSignal-Recorder
 
-Copyright (c) 2021 Moteen Shah moteenshah.02@gmail.com
+Copyright (c) 2023 Mahesh Tupe tupemahesh91@gmail.com
 
 
 Upside Down Labs invests time and resources providing this open source code,
 please support Upside Down Labs and open-source hardware by purchasing
 products from Upside Down Labs!
-Copyright (c) 2021 Upside Down Labs - contact@upsidedownlabs.tech
+Copyright (c) 2023 Upside Down Labs - contact@upsidedownlabs.tech
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
@@ -33,8 +33,7 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
 <!DOCTYPE html>
 
 <style>
-    /* button control */
-
+    /* button */
     .button {
         padding: 0 1%;
         font-size: 22px;
@@ -59,7 +58,6 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
     }
 
     /* blue button */
-
     .button1 {
         background-color: #2196F3
     }
@@ -86,6 +84,7 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
         transform: translateY(3px)
     }
 
+    /* toggle */
     .toggle {
         --width: 80px;
         --height: calc(var(--width) / 3);
@@ -242,8 +241,8 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
         <span class="labels" data-on="ON" data-off="OFF"></span>
     </label>
 
-
     <p>
+        <!-- No. of channel Selector-->
         <select id="channel_count" onclick="showOption()">
             <option value="0">No. of Channels</option>
             <option value="1">1</option>
@@ -252,20 +251,18 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
             <option value="4">4</option>
         </select>
 
-
-
+        <!-- Save CSV button-->
         <button class='button button1' onclick="
         stopOscilloscope ();
         save_csv();
         ">&nbsp;Save&nbsp;</button>
-
-
     </p>
 
     <script>
 
         function showOption() {
 
+            // Remove pre-existing options
             if ($(".select_list_gpio")[0]) {
                 $(".select_list_gpio").remove();
             }
@@ -273,6 +270,7 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
                 $(".select_list_rate").remove();
             }
 
+            // Create selectors according to no. of channles and add options mentioned in text and value arrays
             var parent = document.body;
             gpio_text = ["GPIO 32", "GPIO 33", "GPIO 34", "GPIO 35", "GPIO 36", "GPIO 37", "GPIO 38", "GPIO 39"];
             gpio_value = ['4', '5', '6', '7', '0', '1', '2', '3'];
@@ -305,9 +303,9 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
 
                 parent.appendChild(subparent);
             }
-
         }
 
+        // Start or stop oscilloscope whene toggled
         function toggle(checkbox) {
             if (checkbox.checked) {
                 startOscilloscope();
@@ -317,7 +315,6 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
             }
         }
 
-        var debug = false;
         var data = {
             labels: [0],
             datasets: [{
@@ -351,9 +348,11 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
                 backgroundColor: '#F1C232',
                 borderWidth: 1,
                 pointRadius: 0,
+                tension: 0.4,
             }]
         }
 
+        // config for chart
         var config = {
             type: 'line',
             data: data,
@@ -399,14 +398,15 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
                 }
             }
         }
-
         Chart.defaults.font.size = 16;
         Chart.defaults.font.style = 'normal';
         Chart.defaults.backgroundColor = '#9BD0F5';
         chart = new Chart(document.getElementById('oscilloscope'), config);
 
+
         var webSocket = null;
 
+        // close websocket connection when toggle is switched off
         function stopOscilloscope() {
             if (webSocket != null) {
                 webSocket.close();
@@ -414,7 +414,10 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
             }
         }
 
+        // Initialise CSV file
         var csvFileData = 'Channel, Time, Analog, Packet No.\n';
+
+        // Send values of pin number and sampling rate through webSocket
         function startOscilloscope() {
             stopOscilloscope();
 
@@ -424,7 +427,7 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
                 pin[i] = $(this).val();
                 i++;
             });
-            
+
             var rate = [];
             i = 0;
             $(".select_list_rate").each(function () {
@@ -443,35 +446,40 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
             start_t = Date.now();
             webSocket.onmessage = function (event) {
 
-                if(event.data instanceof ArrayBuffer ){
-				ADC = new Uint16Array(event.data);
-			    }
+                // Store received data
+                if (event.data instanceof ArrayBuffer) {
+                    ADC = new Uint16Array(event.data);
+                }
+
+                // Second last index of data recieved has Channel number and last index has packet number for given channel
                 channel_count = ADC[ADC.length - 1];
                 packet_count = ADC[ADC.length - 2];
-                for (var i = 0; i < ADC.length - 2; i++)
-                {
+
+                // Add recieved data to dataset of chart
+                for (var i = 0; i < ADC.length - 2; i++) {
                     data.datasets[channel_count].data.unshift(ADC[i]);
                 }
+
+                // Remove old data if number of points on screen is greater than 1000
                 while (data.datasets[channel_count].data.length > 1000) {
                     data.datasets[channel_count].data.pop();
                 }
-
-
                 if (data.labels.length > 1000) {
                     data.labels.pop();
                 }
+
                 current_t = Date.now();
                 time = parseInt(current_t) - parseInt(start_t)
                 data.labels.unshift(time);
 
-                for (var i = 0; i < ADC.length - 2; i++)
-                {
+                // Append new data to CSV file
+                for (var i = 0; i < ADC.length - 2; i++) {
                     csvFileData += channel_count + "," + time + "," + ADC[i] + "," + packet_count + "\n";
                 }
-                
+
             };
 
-
+            // Refresh rate of 30 FPS
             window.setInterval(callback, 30);
             function callback() {
                 chart.update();
@@ -479,10 +487,8 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
 
         }
 
-
-
+        // Download CSV file 
         function save_csv() {
-
             var hiddenElement = document.createElement('a');
             hiddenElement.href = 'data:text/csv;charset=utf-8,' + encodeURI(csvFileData);
             hiddenElement.target = '_blank';
@@ -490,20 +496,6 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
             //provide the name for the CSV file to be downloaded
             hiddenElement.download = 'chart.csv';
             hiddenElement.click();
-
-        }
-        function enableDisableControls(workMode) {
-            if (workMode) {
-                // disable GPIO, analog/digital, trigger, frequency and start, enable stop
-                document.getElementById('startButton').disabled = true;
-                document.getElementById('stopButton').disabled = false;
-                document.getElementById('sampling_rate').disabled = false;
-            } else {
-                // enable GPIO, analog/digital, trigger, frequency and start, disable stop
-                document.getElementById('startButton').disabled = false;
-                document.getElementById('stopButton').disabled = true;
-                document.getElementById('sampling_rate').disabled = true;
-            }
         }
     </script>
 
