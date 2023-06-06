@@ -1,8 +1,8 @@
 <!-- EXG-Visualizer
 https://github.com/upsidedownlabs/BioSignal-Recorder
 
+Copyright (c) 2023 Mahesh Tupe tupemahesh91@gmail.com
 Copyright (c) 2021 Moteen Shah moteenshah.02@gmail.com
-
 
 Upside Down Labs invests time and resources providing this open source code,
 please support Upside Down Labs and open-source hardware by purchasing
@@ -31,11 +31,11 @@ SOFTWARE.
 This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/Esp32_oscilloscope. -->
 
 <!DOCTYPE html>
+
 <style>
-    /* button control */
-    
+    /* button */
     .button {
-        padding: 10px 15px;
+        padding: 0 1%;
         font-size: 22px;
         text-align: center;
         cursor: pointer;
@@ -46,248 +46,459 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
         box-shadow: 1px 1px #ccc;
         position: relative;
         top: 0px;
-        height: 42px
+        height: 30px
     }
-    
+
     button:disabled {
         background-color: #aaa
     }
-    
+
     button:disabled:hover {
         background-color: #aaa
     }
+
     /* blue button */
-    
     .button1 {
         background-color: #2196F3
     }
-    
+
     .button1:hover {
         background-color: #0961aa
     }
-    
+
     .button1:active {
         background-color: #0961aa;
         transform: translateY(3px)
     }
-    
+
     .button2 {
         background-color: green
     }
-    
+
     .button2:hover {
         background-color: darkgreen
     }
-    
+
     .button2:active {
         background-color: darkgreen;
         transform: translateY(3px)
     }
-    /* red button */
-    
-    .button3 {
-        background-color: red
+
+    /* toggle */
+    .toggle {
+        --width: 80px;
+        --height: calc(var(--width) / 3);
+
+        position: relative;
+        display: inline-block;
+        width: var(--width);
+        height: var(--height);
+        box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.3);
+        border-radius: var(--height);
+        cursor: pointer;
     }
-    
-    .button3:hover {
-        background-color: darkred
+
+    .toggle input {
+        display: none;
     }
-    
-    .button3:active {
-        background-color: darkred;
-        transform: translateY(3px)
+
+    .toggle .slider {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        border-radius: var(--height);
+        background-color: #ccc;
+        transition: all 0.4s ease-in-out;
+    }
+
+    .toggle .slider::before {
+        content: "";
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: calc(var(--height));
+        height: calc(var(--height));
+        border-radius: calc(var(--height) / 2);
+        background-color: #fff;
+        box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.3);
+        transition: all 0.4s ease-in-out;
+    }
+
+    .toggle input:checked+.slider {
+        background-color: #f37521;
+    }
+
+    .toggle input:checked+.slider::before {
+        transform: translateX(calc(var(--width) - var(--height)));
+    }
+
+    .toggle .labels {
+        position: absolute;
+        top: 5px;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        font-size: 14px;
+        font-family: sans-serif;
+        transition: all 0.4s ease-in-out;
+        overflow: hidden;
+    }
+
+    .toggle .labels::after {
+        content: attr(data-off);
+        position: absolute;
+        right: 5px;
+        color: #4d4d4d;
+        opacity: 1;
+        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.4);
+        transition: all 0.4s ease-in-out;
+    }
+
+    .toggle .labels::before {
+        content: attr(data-on);
+        position: absolute;
+        left: calc(var(--height) - var(--width) + 2px);
+        color: #ffffff;
+        opacity: 0;
+        text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.4);
+        transition: all 0.4s ease-in-out;
+    }
+
+    .toggle input:checked~.labels::after {
+        opacity: 0;
+        transform: translateX(calc(var(--width) - var(--height)));
+    }
+
+    .toggle input:checked~.labels::before {
+        opacity: 1;
+        transform: translateX(calc(var(--width) - var(--height)));
+    }
+
+    .chart {
+        width: 60%;
+        height: auto;
+        margin: auto;
+    }
+
+    select {
+        font-size: 22px;
+        border-radius: 10px;
+        margin-top: 5px;
+    }
+
+    .inner-select-wrapper {
+        position: absolute;
+        z-index: 1;
+        background-color: #fff;
+        border: 1px solid #ccc;
+        padding: 5px;
+    }
+
+    .option-wrapper {
+        position: relative;
+    }
+
+    .option-wrapper:hover {
+        cursor: pointer;
+        background-color: #f2f2f2;
+    }
+
+    #channel_count {
+        text-align: center;
     }
 </style>
 <html>
 
-<body>
-
-    <canvas id='oscilloscope' width='968' height='640' ;></canvas></div>
-
-    <div class='d3'><button class='button button2' id='startButton' onclick="
-    drawBackgroundAndCalculateParameters ();
-    enableDisableControls (true);
-    startOscilloscope ();
-  ">&nbsp;START&nbsp;</button></div>
-    <div class='d5'><button class='button button3' id='stopButton' disabled onclick="
-    enableDisableControls (false);
-    stopOscilloscope ();
-  ">&nbsp;STOP&nbsp;</button></div>
-    </div>
-
-
-</body>
-
 <head>
-    <link rel='shortcut icon' type='image/x-icon' sizes='192x192' href='/android-192-osc.png'>
-    <link rel='icon' type='image/png' sizes='192x192' href='/android-192-osc.png'>
-    <link rel='apple-touch-icon' sizes='180x180' href='/apple-180-osc.png'>
     <meta http-equiv='content-type' content='text/html; charset=utf-8' />
+    <script src="https://code.jquery.com/jquery-3.6.4.min.js"
+        integrity="sha256-oP6HI9z1XaZNBrJURtCoUT5SUnxFr8s3BzRl+cbzUq8=" crossorigin="anonymous"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.8.2/chart.min.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
     <title>Esp32_oscilloscope</title>
+</head>
+
+<body>
+
+    <div class="container mt-5">
+        <div class="card">
+            <div class="card-header" style="align-items: center;">BioSignal-Recorder</div>
+            <div class="card-body">
+                <div class="chart">
+                    <canvas id='oscilloscope'></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <label class="toggle">
+        <input type="checkbox" onclick="toggle(this)">
+        <span class="slider"></span>
+        <span class="labels" data-on="ON" data-off="OFF"></span>
+    </label>
+
+    <p>
+        <!-- No. of channel Selector-->
+        <select id="channel_count" onclick="showOption()">
+            <option value="0">No. of Channels</option>
+            <option value="1">1</option>
+            <option value="2">2</option>
+            <option value="3">3</option>
+            <option value="4">4</option>
+        </select>
+
+        <!-- Save CSV button-->
+        <button class='button button1' onclick="
+        stopOscilloscope ();
+        save_csv();
+        ">&nbsp;Save&nbsp;</button>
+    </p>
+
     <script>
+
+        function showOption() {
+
+            // Remove pre-existing options
+            if ($(".select_list_gpio")[0]) {
+                $(".select_list_gpio").remove();
+            }
+            if ($(".select_list_rate")[0]) {
+                $(".select_list_rate").remove();
+            }
+
+            // Create selectors according to no. of channles and add options mentioned in text and value arrays
+            var parent = document.body;
+            gpio_text = ["GPIO 32", "GPIO 33", "GPIO 34", "GPIO 35", "GPIO 36", "GPIO 37", "GPIO 38", "GPIO 39"];
+            gpio_value = ['4', '5', '6', '7', '0', '1', '2', '3'];
+            rate_text = ["100 Hz", "200 Hz", "300 Hz", "400 Hz", "500 Hz", "1000 Hz", "4000 Hz", "5000 Hz"];
+            rate_value = ["100", "200", "300", "400", "500", "1000", "4000", "5000"];
+
+            for (var i = 0; i < $("#channel_count").val(); i++) {
+                var subparent = document.createElement('p');
+
+                var select_list_gpio = document.createElement("select");
+                select_list_gpio.setAttribute("class", "select_list_gpio");
+                var select_list_rate = document.createElement("select");
+                select_list_rate.setAttribute("class", "select_list_rate");
+
+                for (var j = 0; j < gpio_text.length; j++) {
+                    option = document.createElement("option");
+                    option.value = gpio_value[j];
+                    option.text = gpio_text[j];
+                    select_list_gpio.appendChild(option);
+                }
+
+                for (var j = 0; j < rate_text.length; j++) {
+                    option = document.createElement("option");
+                    option.value = rate_value[j];
+                    option.text = rate_text[j];
+                    select_list_rate.appendChild(option);
+                }
+                subparent.appendChild(select_list_gpio);
+                subparent.appendChild(select_list_rate);
+
+                parent.appendChild(subparent);
+            }
+        }
+
+        // Start or stop oscilloscope whene toggled
+        function toggle(checkbox) {
+            if (checkbox.checked) {
+                startOscilloscope();
+            }
+            else {
+                stopOscilloscope();
+            }
+        }
+
+        var data = {
+            labels: [0],
+            datasets: [{
+                label: 'Channel_1',
+                data: [],
+                borderColor: '#00CCFF',
+                backgroundColor: '#00CCFF',
+                borderWidth: 1,
+                pointRadius: 0,
+            },
+            {
+                label: 'Channel_2',
+                data: [],
+                borderColor: '#e06666',
+                backgroundColor: '#e06666',
+                borderWidth: 1,
+                pointRadius: 0,
+            },
+            {
+                label: 'Channel_3',
+                data: [],
+                borderColor: '#6aa84f',
+                backgroundColor: '#6aa84f',
+                borderWidth: 1,
+                pointRadius: 0,
+            },
+            {
+                label: 'Channel_4',
+                data: [],
+                borderColor: '#F1C232',
+                backgroundColor: '#F1C232',
+                borderWidth: 1,
+                pointRadius: 0,
+                tension: 0.4,
+            }]
+        }
+
+        // config for chart
+        var config = {
+            type: 'line',
+            data: data,
+            options: {
+                scales: {
+                    y: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Analog',
+                            color: '#911',
+                            font: {
+                                family: 'Roboto',
+                                size: 20,
+                                lineHeight: 1.2,
+                            },
+                            padding: { top: 20, left: 0, right: 0, bottom: 0 }
+                        },
+                        suggestedMin: 0,
+                        suggestedMax: 5000,
+                    },
+                    x: {
+                        display: true,
+                        title: {
+                            display: true,
+                            text: 'Time',
+                            color: '#911',
+                            font: {
+                                family: 'Roboto',
+                                size: 20,
+                                lineHeight: 1.2,
+                            },
+                            padding: { top: 10, left: 0, right: 0, bottom: 0 }
+                        },
+                        ticks: {
+                            maxTicksLimit: 10,
+                        }
+                    }
+
+                },
+                animation: {
+                    duration: 0,
+                }
+            }
+        }
+        Chart.defaults.font.size = 16;
+        Chart.defaults.font.style = 'normal';
+        Chart.defaults.backgroundColor = '#9BD0F5';
+        chart = new Chart(document.getElementById('oscilloscope'), config);
+
+
         var webSocket = null;
 
+        // close websocket connection when toggle is switched off
         function stopOscilloscope() {
             if (webSocket != null) {
-                webSocket.send('stop');
                 webSocket.close();
                 webSocket = null;
             }
         }
 
+        // Initialise CSV file
+        var csvFileData = 'Channel, Time, Analog, Packet No.\n';
+
+        // Send values of pin number and sampling rate through webSocket
         function startOscilloscope() {
             stopOscilloscope();
-            if ('WebSocket' in window) {
-                var ws = new WebSocket("ws://" + window.location.hostname + ":81/");
-                webSocket = ws;
-                ws.onmessage = function(evt) {
-                    JSONobj = JSON.parse(evt.data);
-                    var ADCval1, ADCval2, ADCval3, ADCval;
-                    ADCval1 = JSONobj.ADC1;
-                    ADCval2 = JSONobj.ADC2;
-                    ADCval3 = JSONobj.ADC3;
-                    ADCval = [ADCval1, ADCval2, ADCval3];
-                    var myInt16Array = new Int16Array(ADCval);
-                    drawSignal(myInt16Array, 0, myInt16Array.length - 1);
-                };
+
+            var pin = [];
+            var i = 0;
+            $(".select_list_gpio").each(function () {
+                pin[i] = $(this).val();
+                i++;
+            });
+
+            var rate = [];
+            i = 0;
+            $(".select_list_rate").each(function () {
+                rate[i] = $(this).val();
+                i++;
+            });
+            webSocket = new WebSocket("ws://" + window.location.hostname + ":81/");
+            webSocket.binaryType = 'arraybuffer';
+            webSocket.addEventListener("open", (event) => {
+                for (var i = 0; i < $("#channel_count").val(); i++) {
+                    msg = rate[i] + pin[i];
+                    webSocket.send(msg);
+                }
+            })
+
+            start_t = Date.now();
+            webSocket.onmessage = function (event) {
+
+                // Store received data
+                if (event.data instanceof ArrayBuffer) {
+                    ADC = new Uint16Array(event.data);
+                }
+
+                // Second last index of data recieved has Channel number and last index has packet number for given channel
+                channel_count = ADC[ADC.length - 1];
+                packet_count = ADC[ADC.length - 2];
+
+                // Add recieved data to dataset of chart
+                for (var i = 0; i < ADC.length - 2; i++) {
+                    data.datasets[channel_count].data.unshift(ADC[i]);
+                }
+
+                // Remove old data if number of points on screen is greater than 1000
+                while (data.datasets[channel_count].data.length > 1000) {
+                    data.datasets[channel_count].data.pop();
+                }
+                if (data.labels.length > 1000) {
+                    data.labels.pop();
+                }
+
+                current_t = Date.now();
+                time = parseInt(current_t) - parseInt(start_t)
+                data.labels.unshift(time);
+
+                // Append new data to CSV file
+                for (var i = 0; i < ADC.length - 2; i++) {
+                    csvFileData += channel_count + "," + time + "," + ADC[i] + "," + packet_count + "\n";
+                }
+
+            };
+
+            // Refresh rate of 30 FPS
+            window.setInterval(callback, 30);
+            function callback() {
+                chart.update();
             }
+
         }
 
-        var screenWidthTime; // oscilloscope screen width in time units
-        var restartDrawingSignal; // used for drawing the signal
-        var screenTimeOffset; // used for drawing the signal
+        // Download CSV file 
+        function save_csv() {
+            var hiddenElement = document.createElement('a');
+            hiddenElement.href = 'data:text/csv;charset=utf-8,' + encodeURI(csvFileData);
+            hiddenElement.target = '_blank';
 
-        var xOffset;
-        var xScale;
-        var yOffset;
-        var yScale;
-        var yLast;
-
-        function drawBackgroundAndCalculateParameters() {
-
-            var x; // x coordinate
-            var y; // y coordinate
-            var i; // x coordinate in canvas units
-            var j; // y coordinate in canas units
-            var yGridTick;
-            var gridTop; // y value at the top of the grid
-
-            restartDrawingSignal = true; // drawing parameter - for later use
-            screenTimeOffset = 0; // drawing parameter - for later use
-
-            var canvas = document.getElementById('oscilloscope');
-            var ctx = canvas.getContext('2d');
-
-            // colour background
-            ctx.fillStyle = '#031c30';
-            ctx.beginPath();
-            ctx.moveTo(0, 0);
-            ctx.lineTo(canvas.width - 1, 0);
-            ctx.lineTo(canvas.width - 1, canvas.height - 1);
-            ctx.lineTo(0, canvas.height - 1);
-            ctx.fill();
-
-            // calculate drawing parametes and draw grid and scale
-            ctx.strokeStyle = '#2196F3';
-            ctx.lineWidth = 3;
-            ctx.font = '16px Verdana';
-
-            xOffset = 50;
-
-            yScale = -(canvas.height - 60) / 5120;
-            yGridTick = 1000;
-            yScale *= 1;
-            yOffset = canvas.height - 50;
-            gridTop = yOffset + yScale * 5119 + 5;
-
-            // draw horizontal grid and scale
-            for (y = 0; y < 5120; y += yGridTick) {
-                j = yOffset + yScale * y;
-                ctx.strokeText(y.toString(), 5, j + 5);
-                ctx.beginPath();
-                ctx.moveTo(xOffset - 5, j);
-                ctx.lineTo(canvas.width, j);
-                ctx.stroke();
-            }
-
-            screenWidthTime = 3000000;
-            xGridTick = screenWidthTime / 1000;
-            xScale = ((canvas.width - xOffset) * 100) / screenWidthTime;
-            xLabel = "0.3 sec";
-
-            for (x = 0; x < screenWidthTime; x += xGridTick) {
-                i = xOffset + xScale * x;
-                ctx.strokeText(xLabel, i + 25, yOffset + 25);
-                ctx.beginPath();
-                ctx.moveTo(i, yOffset + 5);
-                ctx.lineTo(i, gridTop);
-                ctx.stroke();
-            }
-        }
-
-        drawBackgroundAndCalculateParameters();
-
-        var lastI; // last drawn sample (time)
-        var lastJ1; // signal 1
-        var lastJ2; // signal 2
-
-
-        function drawSignal(myInt16Array, startInd, endInd) {
-            if (startInd > endInd) return;
-            // find dummy sample (the one with value of -1) which will tells javascript cliento to start drawing from beginning of the screen
-            for (var ind = startInd; ind <= endInd; ind += 3) {
-                if (myInt16Array[ind] == -1) { // if signal value = -1 (dummy value)
-                    drawSignal(myInt16Array, startInd, ind - 3); // upt to previous sample, there are 3 16 bit words in each sample
-                    drawBackgroundAndCalculateParameters();
-                    drawSignal(myInt16Array, ind + 3, endInd); // from next sample on, there are 3 16 bit words in each sample
-                    return;
-                }
-            }
-
-            var canvas = document.getElementById('oscilloscope');
-            var ctx = canvas.getContext('2d');
-            ctx.lineWidth = 3;
-
-            for (var ind = startInd; ind < endInd; ind += 3) { // there are 3 16 bit words in each sample
-                // calculate sample position
-                screenTimeOffset += myInt16Array[ind + 2];
-                i = xOffset + xScale * screenTimeOffset; // time
-                j1 = yOffset + yScale * myInt16Array[ind]; // signal 1
-
-                if (restartDrawingSignal) {
-                    restartDrawingSignal = false;
-                } else {
-                    // signal 1
-                    ctx.strokeStyle = '#ffbf80';
-                    ctx.beginPath();
-                    ctx.moveTo(lastI, lastJ1);
-                    ctx.lineTo(i, j1);
-                    ctx.stroke();
-                }
-                lastI = i;
-                lastJ1 = j1;
-                if (i > 1000) {
-
-
-                    screenTimeOffset = 0;
-                    drawBackgroundAndCalculateParameters();
-                }
-            }
-        }
-
-        function enableDisableControls(workMode) {
-            if (workMode) {
-                // disable GPIO, analog/digital, trigger, frequency and start, enable stop
-                document.getElementById('startButton').disabled = true;
-                document.getElementById('stopButton').disabled = false;
-            } else {
-                // enable GPIO, analog/digital, trigger, frequency and start, disable stop
-                document.getElementById('startButton').disabled = false;
-                document.getElementById('stopButton').disabled = true;
-            }
+            //provide the name for the CSV file to be downloaded
+            hiddenElement.download = 'chart.csv';
+            hiddenElement.click();
         }
     </script>
-</head>
+
+</body>
 
 </html>
