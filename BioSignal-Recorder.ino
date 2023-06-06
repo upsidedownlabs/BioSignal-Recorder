@@ -2,7 +2,7 @@
 // https://github.com/upsidedownlabs/BioSignal-Recorder
 
 // Copyright (c) 2023 Mahesh Tupe tupemahesh91@gmail.com
-
+// Copyright (c) 2021 Moteen Shah moteenshah.02@gmail.com
 
 // Upside Down Labs invests time and resources providing this open source code,
 // please support Upside Down Labs and open-source hardware by purchasing
