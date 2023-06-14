@@ -148,27 +148,36 @@ void callback(byte num, WStype_t type, uint8_t * payload, size_t length)
     case WStype_TEXT:
       String rate;
       String gpio;
-      total_channel++;
 
       // Last character of msg recived is GPIO number
       gpio += (char)payload[length - 1];
       gpio += '\n';
-      adc[channel_count] = gpio.toInt();
-      Serial.print("Channel: ");
-      Serial.println(gpio);
-
-      // Remaining characters form sampling rate
-      for (int i = 0; i < length - 1; i++)
+      if (gpio.toInt() == 9)
       {
-        rate += (char)payload[i];
+        String temp;
+        temp += (char)payload[0];
+        total_channel = temp.toInt();
+        Serial.print("Total Channels: ");
+        Serial.println(temp);
       }
-      rate += '\n';
-      sampling_rate = rate.toInt();
-      Serial.print("Sampling rate: ");
-      Serial.println(rate);
+      else {
+        adc[channel_count] = gpio.toInt();
+        Serial.print("Channel: ");
+        Serial.println(gpio);
 
-      send_samples(sampling_rate, adc[channel_count], channel_count);
-      channel_count++;
+        // Remaining characters form sampling rate
+        for (int i = 0; i < length - 1; i++)
+        {
+          rate += (char)payload[i];
+        }
+        rate += '\n';
+        sampling_rate = rate.toInt();
+        Serial.print("Sampling rate: ");
+        Serial.println(rate);
+
+        send_samples(sampling_rate, adc[channel_count], channel_count);
+        channel_count++;
+      }
   }
 }
 
