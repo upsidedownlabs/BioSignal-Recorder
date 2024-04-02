@@ -35,15 +35,16 @@
 #include <driver/adc.h>
 #include <math.h>
 
-WebSocketsServer webSocket = WebSocketsServer(81);
-
 // Add SSID and PASSWORD for network you are connected to
 const char *SSID = "";
 const char *PASSWORD = "";
 
+// Create asyncwebserver object on port 80
 AsyncWebServer server(80);
 
-volatile int interruptCounter[4] = {0};
+// Create websocketserver object on port 81
+// Websocket is used to send actual analog data
+WebSocketsServer webSocket = WebSocketsServer(81);
 
 // Initialize timer interrupts
 hw_timer_t * timer_1 = NULL;
@@ -55,6 +56,9 @@ portMUX_TYPE timerMux_1 = portMUX_INITIALIZER_UNLOCKED;
 portMUX_TYPE timerMux_2 = portMUX_INITIALIZER_UNLOCKED;
 portMUX_TYPE timerMux_3 = portMUX_INITIALIZER_UNLOCKED;
 portMUX_TYPE timerMux_4 = portMUX_INITIALIZER_UNLOCKED;
+
+// Counter for counting number of times each timer gets triggered
+volatile int interruptCounter[4] = {0};
 
 // counter for each timer
 void IRAM_ATTR onTimer_1() {
@@ -83,41 +87,50 @@ void setup()
 {
   Serial.begin(115200);
 
+  // SPIFFS is used for storing HTML, CSS and JS code on esp32
   if (!SPIFFS.begin()) {
     Serial.println("An Error has occurred while mounting SPIFFS");
     return;
   }
 
+  // Connect to WiFi
   WiFi.begin(SSID, PASSWORD);
   while (WiFi.status() != WL_CONNECTED) {
     delay(1000);
     Serial.println("Connecting to WiFi..");
   }
 
+  // Local IP is where our webserver will be hosted
   Serial.println("");
   Serial.print("IP Address: ");
   Serial.println(WiFi.localIP());
 
+  // Send HTML file when server requests it
   server.on("/", HTTP_GET, [](AsyncWebServerRequest * request)
   {
     request->send(SPIFFS, "/index.html");
   });
 
+  // start server
   server.begin();
+
+  // Start websocket connection
   webSocket.begin();
+
+  // Whenever a message is recieved on websocket, callback function is called
   webSocket.onEvent(callback);
 
 }
 
-bool sample = false;
-int sampling_rate = 100;
+bool sample = false;      // Boolean value to tell ESP32 when to start or stop sampling
+int sampling_rate = 0;    // For storing sampling rate of given channel
+int adc[4];               //
+int channel_count = 0;    // For storing channel number of channel in use
+int total_channel = 0;    // For storing total number of channel
 
-
-int adc[4];
-int channel_count = 0;
-int total_channel = 0;
 void callback(byte num, WStype_t type, uint8_t * payload, size_t length)
 {
+  // Switch case based on type of message recieved
   switch (type)
   {
     case WStype_DISCONNECTED:
@@ -126,41 +139,60 @@ void callback(byte num, WStype_t type, uint8_t * payload, size_t length)
       channel_count = 0;
       total_channel = 0;
       break;
+
     case WStype_CONNECTED:
       Serial.println("Client connected");
       sample = true;
       break;
+
     case WStype_TEXT:
       String rate;
       String gpio;
-      total_channel++;
+
+      // Last character of msg recived is GPIO number
       gpio += (char)payload[length - 1];
       gpio += '\n';
-      adc[channel_count] = gpio.toInt();
-      Serial.print("Channel: ");
-      Serial.println(gpio);
-
-      for (int i = 0; i < length - 1; i++)
+      if (gpio.toInt() == 9)
       {
-        rate += (char)payload[i];
+        String temp;
+        temp += (char)payload[0];
+        total_channel = temp.toInt();
+        Serial.print("Total Channels: ");
+        Serial.println(temp);
       }
-      rate += '\n';
-      sampling_rate = rate.toInt();
-      Serial.print("Sampling rate: ");
-      Serial.println(rate);
+      else {
+        adc[channel_count] = gpio.toInt();
+        Serial.print("Channel: ");
+        Serial.println(gpio);
 
-      send_samples(sampling_rate, adc[channel_count], channel_count);
-      channel_count++;
+        // Remaining characters form sampling rate
+        for (int i = 0; i < length - 1; i++)
+        {
+          rate += (char)payload[i];
+        }
+        rate += '\n';
+        sampling_rate = rate.toInt();
+        Serial.print("Sampling rate: ");
+        Serial.println(rate);
+
+        send_samples(sampling_rate, adc[channel_count], channel_count);
+        channel_count++;
+      }
   }
 }
 
+// We will use 2D array for storing data of all 4 channels
+// buffer_add has 4 sub arrays
 uint16_t **buffer_add = (uint16_t **)calloc(4, sizeof(uint16_t *));
-
 
 void send_samples(int sampling_rate, int adc, int channel_count)
 {
-
+  // Fix tick count for timer according to sampling rate for given channel
   int tick_count = 1000000 / sampling_rate;
+
+  // Start timer for corresponding channel
+  // Allocate space for data worth 1 Frame (for 0.33 seconds as chart updates at 30FPS)
+  // Extra 2 blocks for storing channel number and packet number
   switch (channel_count)
   {
     case 0:
@@ -194,18 +226,20 @@ void send_samples(int sampling_rate, int adc, int channel_count)
       timerAlarmEnable(timer_4);
       buffer_add[3] = (uint16_t*)calloc(round((float)sampling_rate / 30.0) + 2, sizeof(uint16_t));
       break;
-
   }
+
+  // Configure ADC of ESP32 for 12 bit resolution and highest attenuation
   adc1_config_width(ADC_WIDTH_BIT_12);
   adc1_config_channel_atten((adc1_channel_t)(adc), ADC_ATTEN_DB_11);
 }
 
-static long num_counter = 0;
-static long buffer_counter[4] = {0};
+static long packet_counter = 0;       // Stores current packet number
+static long buffer_counter[4] = {0};  // Stores size of packet
 portMUX_TYPE * timer_mux = NULL;
 void loop() {
   webSocket.loop();
 
+  // Loop through selected channels and select corresponding timerMux
   for (int i = 0; i < total_channel; i++)
   {
     switch (i)
@@ -223,36 +257,45 @@ void loop() {
         timer_mux = &timerMux_4;
         break;
     }
+
+    // If corresponding timer has triggered sample once and decrement interrupt counter
     if (interruptCounter[i] > 0)
     {
-
       portENTER_CRITICAL(timer_mux);
       interruptCounter[i]--;
       portEXIT_CRITICAL(timer_mux);
 
+      // Store samples in buffer until enough samples are taken for one frame
       if (buffer_counter[i] < round((float)sampling_rate / 30.0))
       {
         buffer_add[i][buffer_counter[i]] = adc1_get_raw((adc1_channel_t)adc[i]) & 0x0FFF;
         buffer_counter[i]++;
       }
+
+      // If packet for a frame is ready increment packet number and transmit packet
       else
       {
-        if (num_counter < 100)
+        if (packet_counter < 100)
         {
-          num_counter++;
+          packet_counter++;
         }
         else
         {
-          num_counter = 0;
+          packet_counter = 0;
         }
-        buffer_add[i][buffer_counter[i]] = num_counter & 0x0FFF;
+
+        // Second last index contains packet number
+        buffer_add[i][buffer_counter[i]] = packet_counter & 0x0FFF;
         buffer_counter[i]++;
+
+        // Last index contains channel number
         buffer_add[i][buffer_counter[i]] = i & 0x0FFF;
         buffer_counter[i]++;
+
+        // Transmit data packet
         webSocket.sendBIN(0, (uint8_t *)&buffer_add[i][0], buffer_counter[i]*sizeof(uint16_t));
-        buffer_counter[i] = 0;
+        buffer_counter[i] = 0;  // empty buffer
       }
     }
-
   }
 }
