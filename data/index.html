@@ -31,183 +31,18 @@ SOFTWARE.
 This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/Esp32_oscilloscope. -->
 
 <!DOCTYPE html>
-
-<style>
-    /* button */
-    .button {
-        padding: 0 1%;
-        top: 0;
-        font-size: 22px;
-        text-align: center;
-        cursor: pointer;
-        outline: none;
-        color: white;
-        border: none;
-        border-radius: 12px;
-        box-shadow: 1px 1px #ccc;
-        position: relative;
-        height: 30px
-    }
-
-    button:disabled {
-        background-color: #aaa
-    }
-
-    button:disabled:hover {
-        background-color: #aaa
-    }
-
-    /* blue button */
-    .button1 {
-        background-color: #2196F3
-    }
-
-    .button1:hover {
-        background-color: #0961aa
-    }
-
-    .button1:active {
-        background-color: #0961aa;
-        transform: translateY(3px)
-    }
-
-    /* toggle */
-    .toggle {
-        --width: 90px;
-        --height: calc(var(--width) / 3);
-        top: 7px;
-        position: relative;
-        display: inline-block;
-        width: var(--width);
-        height: var(--height);
-        box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.3);
-        border-radius: var(--height);
-        cursor: pointer;
-    }
-
-    .toggle input {
-        display: none;
-    }
-
-    .toggle .slider {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        border-radius: var(--height);
-        background-color: #ccc;
-        transition: all 0.4s ease-in-out;
-    }
-
-    .toggle .slider::before {
-        content: "";
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: calc(var(--height));
-        height: calc(var(--height));
-        border-radius: calc(var(--height) / 2);
-        background-color: #fff;
-        box-shadow: 0px 1px 3px rgba(0, 0, 0, 0.3);
-        transition: all 0.4s ease-in-out;
-    }
-
-    .toggle input:checked+.slider {
-        background-color: #f37521;
-    }
-
-    .toggle input:checked+.slider::before {
-        transform: translateX(calc(var(--width) - var(--height)));
-    }
-
-    .toggle .labels {
-        position: absolute;
-        top: 5px;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        font-size: 14px;
-        font-family: sans-serif;
-        transition: all 0.4s ease-in-out;
-        overflow: hidden;
-    }
-
-    .toggle .labels::after {
-        content: attr(data-off);
-        position: absolute;
-        right: 5px;
-        color: #4d4d4d;
-        opacity: 1;
-        text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.4);
-        transition: all 0.4s ease-in-out;
-    }
-
-    .toggle .labels::before {
-        content: attr(data-on);
-        position: absolute;
-        left: calc(var(--height) - var(--width) + 2px);
-        color: #ffffff;
-        opacity: 0;
-        text-shadow: 1px 1px 2px rgba(255, 255, 255, 0.4);
-        transition: all 0.4s ease-in-out;
-    }
-
-    .toggle input:checked~.labels::after {
-        opacity: 0;
-        transform: translateX(calc(var(--width) - var(--height)));
-    }
-
-    .toggle input:checked~.labels::before {
-        opacity: 1;
-        transform: translateX(calc(var(--width) - var(--height)));
-    }
-
-    /* No. of Channel and GPIO selector*/
-    select {
-        font-size: 22px;
-        border-radius: 10px;
-        margin-top: 5px;
-        text-align: center;
-    }
-
-    label {
-        font-size: 22px;
-    }
-
-    /* Sampling rate input */
-    input {
-        position: relative;
-        font-size: 20px;
-        border-radius: 10px;
-    }
-
-    /* Chart container */
-    .chart {
-        display: flex;
-        flex-direction: column;
-    }
-
-    .line {
-        display: flex;
-        text-align: center;
-        flex-direction: row;
-        flex-wrap: wrap;
-        justify-content: center;
-        align-content: space-around;
-    }
-
-    .parent {
-        flex-basis: 45%;
-        bottom: 0px;
-        margin: 0px 5px;
-    }
-</style>
-
-<html>
+<html lang="en">
 
 <head>
-    <meta http-equiv='content-type' content='text/html; charset=utf-8' />
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+
+    <title>Bio-Signal Recorder</title>
+
+    <!-- Import Bootstrap -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+    <link href="https://getbootstrap.com/docs/5.3/assets/css/docs.css" rel="stylesheet" />
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
 
     <!-- Import jquery -->
     <script src="https://code.jquery.com/jquery-3.6.4.min.js"
@@ -216,118 +51,161 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
     <!-- Import chart.js -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.8.2/chart.min.js"></script>
 
-    <title>Esp32_oscilloscope</title>
+    <style>
+        @media (min-width: 991.98px) {
+            .child {
+                max-width: 95%;
+                max-height: 500px;
+            }
+        }
+
+        ;
+
+        .child {
+            max-height: 500px;
+        }
+
+        ;
+    </style>
 </head>
 
-<body>
+<body class="bg-secondary">
+    <div class="container-fluid">
 
-    <div>
-        <!-- ON-OFF Toggle button -->
-        <label class="toggle">
-            <input type="checkbox" onclick="toggle(this)">
-            <span class="slider"></span>
-            <span class="labels" data-on="ON" data-off="OFF"></span>
-        </label>
+        <!-- Navbar -->
+        <nav class="navbar navbar-dark bg-dark navbar-expand-lg">
+            <div class="container-fluid">
 
-        <!-- Save CSV button-->
-        <button class='button button1' onclick="
-        stopOscilloscope ();
-        save_csv();
-        ">&nbsp;Save&nbsp;</button>
-    </div>
+                <!-- Header -->
+                <a class="navbar-brand text-white btn btn-outline-light bg-dark" href="#">Bio-Signal Recorder</a>
 
-    <!-- No. of channel Selector-->
-    <div> <label>No. of Channels</label>
-        <select id="channel_count" onchange="create_chart()">
-            <option selected value="1">1</option>
-            <option value="2">2</option>
-            <option value="3">3</option>
-            <option value="4">4</option>
-        </select>
+                <!-- Navbar Toggler -->
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse"
+                    data-bs-target="#navbarTogglerDemo01">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+
+                <!-- Navbar Elements -->
+                <div class="collapse navbar-collapse justify-content-end" id="navbarTogglerDemo01">
+
+                    <!-- Save CSV -->
+                    <button type="button" class="btn btn-outline-light btn-md w-auto m-1 fixed-right"
+                        onclick="save_csv()">
+                        Save
+                    </button>
+
+                    <!-- Select Number of Chart -->
+                    <div class="btn btn-outline-light bg-dark w-auto m-1">
+                        <label class="text-light">No. of Channels</label>
+                        <select class="bg-dark text-light" id="channel_count" onchange="create_chart()">
+                            <option selected value="1">1</option>
+                            <option value="2">2</option>
+                            <option value="3">3</option>
+                            <option value="4">4</option>
+                        </select>
+                    </div>
+
+                    <!-- On-Off Button -->
+                    <div class="btn-group btn-group-toggle m-1 w-auto" data-toggle="buttons">
+                        <label class="btn btn-primary active">
+                            <input type="radio" name="options" id="option1" autocomplete="off" />
+                            Start
+                        </label>
+                        <label class="btn btn-secondary">
+                            <input type="radio" name="options" id="option2" autocomplete="off" checked />
+                            Stop
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </nav>
     </div>
 
     <!-- Space of charts -->
-    <div class="chart">
-        <div class="line">
-            <div class="parent" id="d0" hidden>
-                <canvas class="child" id='c0'></canvas>
+    <div class="container">
+        <div class="row  text-center">
+            <div class="parent bg-dark m-1 p-1 rounded-2 d-none col " id="d0">
+                <canvas class="child d-none " id="c0"></canvas>
             </div>
-            <div class="parent" id="d1" hidden>
-                <canvas class="child" id='c1'></canvas>
+            <div class="parent bg-dark m-1 p-1 rounded-2 d-none col " id="d1">
+                <canvas class="child d-none " id="c1"></canvas>
             </div>
         </div>
-        <div class="line">
-            <div class="parent" id="d2" hidden>
-                <canvas class="child" id='c2'></canvas>
+        <div class="row text-center">
+            <div class="parent bg-dark m-1 p-1 rounded-2 d-none col " id="d2">
+                <canvas class="child d-none " id="c2"></canvas>
             </div>
-            <div class="parent" id="d3" hidden>
-                <canvas class="child" id='c3'></canvas>
+            <div class="parent bg-dark m-1 p-1 rounded-2 d-none col " id="d3">
+                <canvas class="child d-none " id="c3"></canvas>
             </div>
         </div>
     </div>
 
     <script>
-        // Start or stop oscilloscope when On-Off switch is toggled
-        function toggle(checkbox) {
-            if (checkbox.checked) {
-                startOscilloscope();
-            }
-            else {
-                stopOscilloscope();
-            }
-        }
+
+        // Add event listeners to the start-stop buttons
+        const startButton = document.getElementById("option1");
+        const stopButton = document.getElementById("option2");
+
+        startButton.addEventListener("click", startOscilloscope);
+        stopButton.addEventListener("click", stopOscilloscope);
+
 
         /*********************************************************************************************************************************/
         /************************************ Visual configuration for data shown on chart ***********************************************/
-        var dataBSR = []
+        var dataBSR = [];
         dataBSR[0] = {
             labels: [0],
-            datasets: [{
-                label: 'Channel_1',
-                data: [],
-                borderColor: '#00CCFF',
-                backgroundColor: '#00CCFF',
-                borderWidth: 2,
-                pointRadius: 0,
-            },
-            ]
-        }
+            datasets: [
+                {
+                    label: 'Channel_1',
+                    data: [],
+                    borderColor: '#00CCFF',
+                    backgroundColor: '#00CCFF',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                },
+            ],
+        };
         dataBSR[1] = {
             labels: [0],
-            datasets: [{
-                label: 'Channel_2',
-                data: [],
-                borderColor: '#4f0da1',
-                backgroundColor: '#4f0da1',
-                borderWidth: 2,
-                pointRadius: 0,
-            },
-            ]
-        }
+            datasets: [
+                {
+                    label: 'Channel_2',
+                    data: [],
+                    borderColor: '#4f0da1',
+                    backgroundColor: '#4f0da1',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                },
+            ],
+        };
         dataBSR[2] = {
             labels: [0],
-            datasets: [{
-                label: 'Channel_3',
-                data: [],
-                borderColor: '#32a836',
-                backgroundColor: '#32a836',
-                borderWidth: 2,
-                pointRadius: 0,
-            },
-            ]
-        }
+            datasets: [
+                {
+                    label: 'Channel_3',
+                    data: [],
+                    borderColor: '#32a836',
+                    backgroundColor: '#32a836',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                },
+            ],
+        };
         dataBSR[3] = {
             labels: [0],
-            datasets: [{
-                label: 'Channel_4',
-                data: [],
-                borderColor: '#b80d43',
-                backgroundColor: '#b80d43',
-                borderWidth: 2,
-                pointRadius: 0,
-            },
-            ]
-        }
+            datasets: [
+                {
+                    label: 'Channel_4',
+                    data: [],
+                    borderColor: '#b80d43',
+                    backgroundColor: '#b80d43',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                },
+            ],
+        };
 
         // config for chart
         var optionsBSR = {
@@ -337,13 +215,13 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
                     title: {
                         display: true,
                         text: 'Analog',
-                        color: '#911',
+                        color: '#999',
                         font: {
                             family: 'Roboto',
                             size: 20,
                             lineHeight: 1.2,
                         },
-                        padding: { top: 20, left: 0, right: 0, bottom: 0 }
+                        padding: { top: 20, left: 0, right: 0, bottom: 0 },
                     },
                     suggestedMin: 0,
                     suggestedMax: 5000,
@@ -353,19 +231,18 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
                     title: {
                         display: true,
                         text: 'Time',
-                        color: '#911',
+                        color: '#999',
                         font: {
                             family: 'Roboto',
                             size: 20,
                             lineHeight: 1.2,
                         },
-                        padding: { top: 10, left: 0, right: 0, bottom: 0 }
+                        padding: { top: 10, left: 0, right: 0, bottom: 0 },
                     },
                     ticks: {
                         maxTicksLimit: 10,
-                    }
-                }
-
+                    },
+                },
             },
             animation: {
                 duration: 0,
@@ -373,13 +250,14 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
             elements: {
                 line: {
                     tension: 0.5,
-                }
-            }
-        }
+                },
+            },
+            responsive: true,
+        };
 
-        Chart.defaults.font.size = 16;
+        Chart.defaults.font.size = 13;
         Chart.defaults.font.style = 'normal';
-        Chart.defaults.backgroundColor = '#9BD0F5';
+        Chart.defaults.backgroundColor = '#44d474';
         /**********************************************************************************************************************************/
 
         // This array will contain chart instances. We can use these to update individual charts
@@ -389,78 +267,100 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
             //Before we create new charts we need to remove older ones by removing corresponding canvas
             if (chart.length) {
                 for (var i = 0; i < chart.length; i++) {
-                    ID = "c" + i;
-                    document.getElementById(ID).remove();
-
-                    var canvas = document.createElement("canvas");
-                    canvas.id = ID;
-                    canvas_parent = "#d" + (i)
-                    $(canvas_parent).append(canvas);
-                    $(canvas_parent).hide();
+                    canvas_parent = '#d' + i;
+                    $(canvas_parent).toggleClass('d-none');
+                    ID = '#c' + i;
+                    chart[i].destroy();
+                    $(ID).toggleClass('d-none');
                 }
-            }
-            chart.length = 0;
-            let numCanvases = $("#channel_count").val()
-
-
-            // Create new charts according to number of channels
-            for (var i = 0; i < numCanvases; i++) {
-                ID_C = "#c" + i;
-                ID_D = "#d" + i;
-                $(ID_D).show();
-                const ctx = $(ID_C)[0].getContext('2d');
-                chart[i] = new Chart(ctx, { type: 'line', data: dataBSR[i], options: optionsBSR });
+                chart.length = 0;
             }
 
             // Remove pre-existing options
-            if ($(".select_list_gpio")[0]) {
-                $(".select_list_gpio").remove();
+            if ($('.select_list_gpio')[0]) {
+                $('.select_list_gpio').remove();
             }
-            if ($(".input_sampling_rate")[0]) {
-                $(".input_sampling_rate").remove();
+            if ($('.input_sampling_rate')[0]) {
+                $('.input_sampling_rate').remove();
             }
 
             // Create selectors according to no. of channles and add options mentioned in text and value arrays
-            gpio_text = ["GPIO 32", "GPIO 33", "GPIO 34", "GPIO 35", "GPIO 36", "GPIO 37", "GPIO 38", "GPIO 39"];
+            gpio_text = [
+                'GPIO 32',
+                'GPIO 33',
+                'GPIO 34',
+                'GPIO 35',
+                'GPIO 36',
+                'GPIO 37',
+                'GPIO 38',
+                'GPIO 39',
+            ];
             gpio_value = ['4', '5', '6', '7', '0', '1', '2', '3'];
 
-            for (var i = 0; i < $("#channel_count").val(); i++) {
-                var subparent = document.createElement('p');
+            var channelCount = parseInt($('#channel_count').val());
 
-                var select_list_gpio = document.createElement("select");
-                select_list_gpio.setAttribute("class", "select_list_gpio");
-                var input_sampling_rate = document.createElement("input");
-                input_sampling_rate.setAttribute("class", "input_sampling_rate");
+            // Create new charts according to number of channels
+            if (!isNaN(channelCount) && channelCount > 0) {
+                for (var i = 0; i < channelCount; i++) {
 
-                for (var j = 0; j < gpio_text.length; j++) {
-                    option = document.createElement("option");
-                    option.value = gpio_value[j];
-                    option.text = gpio_text[j];
-                    select_list_gpio.appendChild(option);
+                    ID_C = '#c' + i;
+                    ID_D = '#d' + i;
+                    $(ID_D).toggleClass('d-none');
+                    $(ID_C).toggleClass('d-none');
+
+                    const ctx = $(ID_C)[0].getContext('2d');
+
+                    chart[i] = new Chart(ctx, {
+                        type: 'line',
+                        data: dataBSR[i],
+                        options: optionsBSR,
+                    });
+                    var subparent = document.createElement('p');
+
+                    var select_list_gpio = document.createElement('select');
+                    select_list_gpio.setAttribute(
+                        'class',
+                        'select_list_gpio m-1 w-auto form-select-md'
+                    );
+                    var input_sampling_rate = document.createElement('input');
+                    input_sampling_rate.setAttribute(
+                        'class',
+                        'input_sampling_rate w-auto m-1 form-md'
+                    );
+
+                    for (var j = 0; j < gpio_text.length; j++) {
+                        option = document.createElement('option');
+                        option.value = gpio_value[j];
+                        option.text = gpio_text[j];
+                        select_list_gpio.appendChild(option);
+                    }
+                    subparent.appendChild(select_list_gpio);
+                    subparent.appendChild(input_sampling_rate);
+
+                    cl = '#d' + i;
+                    $(cl).append(subparent);
                 }
-
-                subparent.appendChild(select_list_gpio);
-                subparent.appendChild(input_sampling_rate);
-
-                cl = "#d" + i;
-                $(cl).append(subparent);
+            } else {
+                console.log('Something Went Wrong!');
             }
-            $(".input_sampling_rate").attr("type", "number")
-            $(document).ready(function () {
-                $("input").attr({
-                    "max": 5000,
-                    "min": 1
-                })
-            })
-        }
-        $("#channel_count").on("change", create_chart());
 
+            $('.input_sampling_rate').attr('type', 'number');
+            $(document).ready(function () {
+                $('input').attr({
+                    max: 5000,
+                    min: 1,
+                });
+            });
+        }
+
+        create_chart();
 
         // This stores websocket object when we start websocket connection
         var webSocket = null;
 
         // close websocket connection when toggle is switched off
         function stopOscilloscope() {
+
             if (webSocket != null) {
                 webSocket.close();
                 webSocket = null;
@@ -470,16 +370,13 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
         // Initialise CSV file
         var csvFileData = 'Channel, Time, Analog, Packet No.\n';
 
-        /*  
-        Called when toggle is switched On.
-        This function is used to start websocket connection.
-        */
+        /*  Called when toggle is switched On.
+            This function is used to start websocket connection.*/
         function startOscilloscope() {
-
             // Create array of selected GPIO numbers
             var pin = [];
             var i = 0;
-            $(".select_list_gpio").each(function () {
+            $('.select_list_gpio').each(function () {
                 pin[i] = $(this).val();
                 i++;
             });
@@ -487,24 +384,24 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
             // Create array of selected sampling rate
             var rate = [];
             i = 0;
-            $(".input_sampling_rate").each(function () {
+            $('.input_sampling_rate').each(function () {
                 rate[i] = $(this).val();
                 i++;
             });
 
             // Start a new websocket connection
-            webSocket = new WebSocket("ws://" + window.location.hostname + ":81/");
+            webSocket = new WebSocket('ws://' + window.location.hostname + ':81/');
             webSocket.binaryType = 'arraybuffer';
 
             // When connection is 'opened' GPIO and corresponding sampling rate should be transmitted.
-            webSocket.addEventListener("open", (event) => {
-                msg = $("#channel_count").val() + '9';
+            webSocket.addEventListener('open', (event) => {
+                msg = $('#channel_count').val() + '9';
                 webSocket.send(msg);
-                for (var i = 0; i < $("#channel_count").val(); i++) {
+                for (var i = 0; i < parseInt($('#channel_count').val()); i++) {
                     msg = rate[i] + pin[i];
                     webSocket.send(msg);
                 }
-            })
+            });
 
             // Store current time before starting chart
             // we will use relative time as lable in chart
@@ -512,7 +409,6 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
 
             // Whenever a packet is recieved through websocket following function is called
             webSocket.onmessage = function (event) {
-
                 // Store received data
                 if (event.data instanceof ArrayBuffer) {
                     ADC = new Uint16Array(event.data);
@@ -539,29 +435,37 @@ This file is part of Esp32_oscilloscope project: https://github.com/BojanJurca/E
 
                 // Get current time, just before updating CSV and chart
                 current_t = Date.now();
-                time = parseInt(current_t) - parseInt(start_t)
+                time = parseInt(current_t) - parseInt(start_t);
                 dataBSR[channel_count].labels.unshift(time);
 
                 // Append new data to CSV file
                 for (var i = 0; i < ADC.length - 2; i++) {
-                    csvFileData += channel_count + "," + time + "," + ADC[i] + "," + packet_count + "\n";
+                    csvFileData +=
+                        channel_count +
+                        ',' +
+                        time +
+                        ',' +
+                        ADC[i] +
+                        ',' +
+                        packet_count +
+                        '\n';
                 }
             };
 
             // Refresh rate of 30 FPS
             window.setInterval(callback, 30);
             function callback() {
-                for (var i = 0; i < $("#channel_count").val(); i++) {
+                for (var i = 0; i < parseInt($('#channel_count').val()); i++) {
                     chart[i].update();
                 }
             }
-
         }
 
-        // Download CSV file 
+        // Download CSV file
         function save_csv() {
             var hiddenElement = document.createElement('a');
-            hiddenElement.href = 'data:text/csv;charset=utf-8,' + encodeURI(csvFileData);
+            hiddenElement.href =
+                'data:text/csv;charset=utf-8,' + encodeURI(csvFileData);
             hiddenElement.target = '_blank';
 
             //provide the name for the CSV file to be downloaded
